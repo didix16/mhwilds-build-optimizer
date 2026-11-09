@@ -1,0 +1,53 @@
+Wilds Forge — unofficial Monster Hunter Wilds build optimizer.
+Monster Hunter and game names, text, icons and other game assets are owned by CAPCOM.
+
+Equipment, skills, descriptions, crafting materials and English/Spanish game localization:
+MHDB Wilds — https://docs.wilds.mhdb.io/
+Data importer reference — https://github.com/LartTyler/mhdb-wilds-data
+Snapshot metadata and SHA-256 checksums: data/manifest.json.
+The extraction toolkit's GPL-3.0 license is not represented as a license to CAPCOM's game assets.
+
+Armor transcendence, random talisman and Artian/Gogma data:
+Monster Hunter Wiki — https://monsterhunterwiki.org/wiki/Module:MHWilds
+https://monsterhunterwiki.org/wiki/Module:MHWilds/data/Armor.json
+https://monsterhunterwiki.org/wiki/Module:MHWilds/data/RngTalismans.json
+https://monsterhunterwiki.org/wiki/Module:MHWilds/data/TalismanSkillGroups.json
+https://monsterhunterwiki.org/wiki/Artian_Weapons_(MHWilds)
+https://monsterhunterwiki.org/wiki/Gogma_Artian_Weapons_(MHWilds)
+Community-authored wiki content is attributed to Monster Hunter Wiki contributors;
+see https://monsterhunterwiki.org/wiki/Project:Copyrights for the wiki's terms.
+Game-derived factual tables were normalized and joined with MHDB localization.
+
+Game skill icons obtained via ni-null/MHWilds-Charm-Odds-Calculator:
+https://github.com/ni-null/MHWilds-Charm-Odds-Calculator
+Revision 90e1d852c0fa20ce3e38f36dbc679c0d105fe6dd.
+No application code from that repository is included.
+Game assets remain CAPCOM's property. Missing icons use application category symbols.
+
+Combat formula code, reference motion-value tables and equipment icons adapted from:
+https://github.com/chanleyou/mhwilds-calculator
+Revision bf5f6cf78386e374ee5d15c8d9193ff31532e8b1.
+Original license follows. Formula code is bundled with path adaptation; data and
+motion values have not been certified against every current game patch.
+
+MIT License
+
+Copyright (c) 2025 Chan Le You
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

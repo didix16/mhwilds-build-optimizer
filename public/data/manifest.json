@@ -1,0 +1,211 @@
+{
+  "schema": 1,
+  "targetVersion": "1.042.00.03",
+  "contentCoverage": "1.041 content present; 1.042 patch parity not certified",
+  "downloadedAt": "2026-11-09T18:33:18.676Z",
+  "counts": {
+    "skills": 179,
+    "armor": 714,
+    "weapons": 1188,
+    "decorations": 361,
+    "charms": 183,
+    "monsters": 34
+  },
+  "armorUpgradeMatched": 703,
+  "sources": [
+    {
+      "name": "en-skills.json",
+      "url": "https://wilds.mhdb.io/en/skills",
+      "sha256": "8c29015531b9df148d7bb4006c63e025c88469d3f4922492dca8ea58333a3888",
+      "bytes": 96628
+    },
+    {
+      "name": "en-armor.json",
+      "url": "https://wilds.mhdb.io/en/armor",
+      "sha256": "24f4133a78dba14591c3c831e33932fc23fde0393ac423a7d65a9772ad4e08a1",
+      "bytes": 1526023
+    },
+    {
+      "name": "en-weapons.json",
+      "url": "https://wilds.mhdb.io/en/weapons",
+      "sha256": "120d03144ccd967ea9470218fb9e0887eb6e09e48644d5ed9408686c8fe53f7f",
+      "bytes": 2608465
+    },
+    {
+      "name": "en-decorations.json",
+      "url": "https://wilds.mhdb.io/en/decorations",
+      "sha256": "ce4a5b2b5ecfe8bbdb38f048279592a3a35097497cb32886348ddf0354c8f967",
+      "bytes": 159850
+    },
+    {
+      "name": "en-charms.json",
+      "url": "https://wilds.mhdb.io/en/charms",
+      "sha256": "78bdc011c472d480eecae2b77b239069034e67b727ab814fda5e0dab49b0445e",
+      "bytes": 290650
+    },
+    {
+      "name": "en-items.json",
+      "url": "https://wilds.mhdb.io/en/items",
+      "sha256": "0d488ef1a06dbca5230824c0da9eb26b752771705a42ca4fae41101ee45635f4",
+      "bytes": 212409
+    },
+    {
+      "name": "en-monsters.json",
+      "url": "https://wilds.mhdb.io/en/monsters",
+      "sha256": "35d07b30b54e6e805b22d135a26a7736e077b59730b92a37c3a0bbb35b8416d1",
+      "bytes": 464292
+    },
+    {
+      "name": "es-skills.json",
+      "url": "https://wilds.mhdb.io/es/skills",
+      "sha256": "bfbe52ecf90ab716181df05933229f4b8938f6017eedf71e2da25b70d3f30b4f",
+      "bytes": 106104
+    },
+    {
+      "name": "es-armor.json",
+      "url": "https://wilds.mhdb.io/es/armor",
+      "sha256": "44f34d9a8a1d7fe26ba56104d4efcc25b06040dab20c157f718e19d8b18eece4",
+      "bytes": 1613036
+    },
+    {
+      "name": "es-weapons.json",
+      "url": "https://wilds.mhdb.io/es/weapons",
+      "sha256": "462e4d10a1b778bfceb80aade255377c69da28dcbdc0f5397681098326d608ba",
+      "bytes": 2733544
+    },
+    {
+      "name": "es-decorations.json",
+      "url": "https://wilds.mhdb.io/es/decorations",
+      "sha256": "d455cb36d25b3075194e6c56b85818f7677cdde876b61664b500203490a1fdca",
+      "bytes": 171775
+    },
+    {
+      "name": "es-charms.json",
+      "url": "https://wilds.mhdb.io/es/charms",
+      "sha256": "5fa76b458a65204253ce8422698cabb3cd8741ba3920e57e6cd2b92e301e5812",
+      "bytes": 304081
+    },
+    {
+      "name": "es-items.json",
+      "url": "https://wilds.mhdb.io/es/items",
+      "sha256": "41049913b035b09234436462c3e4b4f8828f27bfefd40e9f62a70f08bbe1e6a5",
+      "bytes": 222118
+    },
+    {
+      "name": "es-monsters.json",
+      "url": "https://wilds.mhdb.io/es/monsters",
+      "sha256": "9bbf1421e2659d11093b46ec8fc288502f76d70799fe87341a8fe389567ce291",
+      "bytes": 471283
+    },
+    {
+      "name": "mhdb-ArmorUpgrade.json",
+      "url": "https://raw.githubusercontent.com/LartTyler/mhdb-wilds-data/c50a1eb892f4a1ad9bb35c147801658804be2cc2/output/merged/ArmorUpgrade.json",
+      "sha256": "3159a578910a30c8046b8600e3c59dd88e4b93127e6243975b2b02f69155a8df",
+      "bytes": 11345
+    },
+    {
+      "name": "mhdb-Amulet.json",
+      "url": "https://raw.githubusercontent.com/LartTyler/mhdb-wilds-data/c50a1eb892f4a1ad9bb35c147801658804be2cc2/output/merged/Amulet.json",
+      "sha256": "6fc834967f3a07a9c91bdfbf895163c83ab5fd7e48f3838f787c2550f20ce90a",
+      "bytes": 421207
+    },
+    {
+      "name": "charms-Rarity.json",
+      "url": "https://raw.githubusercontent.com/ni-null/MHWilds-Charm-Odds-Calculator/90e1d852c0fa20ce3e38f36dbc679c0d105fe6dd/src/data/Rarity.json",
+      "sha256": "dc04609a98641ecdf6c166d14bbaa1f0ee9606d29ed1ce5a1f7bf9dd5259d1cd",
+      "bytes": 6463
+    },
+    {
+      "name": "charms-SkillGroups.json",
+      "url": "https://raw.githubusercontent.com/ni-null/MHWilds-Charm-Odds-Calculator/90e1d852c0fa20ce3e38f36dbc679c0d105fe6dd/src/data/SkillGroups.json",
+      "sha256": "5fffe914bc017ba4a69d50971c97732c0e7ecee2e08c5d649bd49dd6e33c97d9",
+      "bytes": 33167
+    },
+    {
+      "name": "calculator-ArtianDialog.tsx",
+      "url": "https://raw.githubusercontent.com/chanleyou/mhwilds-calculator/bf5f6cf78386e374ee5d15c8d9193ff31532e8b1/src/components/ArtianDialog.tsx",
+      "sha256": "aa8250be3b0753b0439666d4cf9917e9b576ef66305459e46fa12143a10a2674",
+      "bytes": 4448
+    },
+    {
+      "name": "calculator-index.ts",
+      "url": "https://raw.githubusercontent.com/chanleyou/mhwilds-calculator/bf5f6cf78386e374ee5d15c8d9193ff31532e8b1/src/data/attacks/index.ts",
+      "sha256": "e1b3d412f11158079b06afe44e898f50a51297dc02a66d521752700505075bfb",
+      "bytes": 1834
+    },
+    {
+      "name": "calculator-skills.ts",
+      "url": "https://raw.githubusercontent.com/chanleyou/mhwilds-calculator/bf5f6cf78386e374ee5d15c8d9193ff31532e8b1/src/data/skills.ts",
+      "sha256": "d5dd36d508c1fe92cfd21f0adc8d6c1dae63f18b7791794cd637180a65ce32d6",
+      "bytes": 29032
+    },
+    {
+      "name": "calculator-LICENSE.md",
+      "url": "https://raw.githubusercontent.com/chanleyou/mhwilds-calculator/bf5f6cf78386e374ee5d15c8d9193ff31532e8b1/LICENSE.md",
+      "sha256": "6b65188408e7e808f27d39f737f9d83fcf849704c10d8f061a39cbd555e89c11",
+      "bytes": 1055
+    },
+    {
+      "name": "sets-defense-levels.json",
+      "url": "https://raw.githubusercontent.com/cecilbowen/mhwilds-set-search/2cf89ea3baa8f7494b81d68fb00c427eeadc3860/src/data/compact/defense-levels.json",
+      "sha256": "ecc91be8e1ab4322bb61009a3ef93d7d29285e312848f081e0d69c87fe9dea15",
+      "bytes": 132
+    },
+    {
+      "name": "sets-armor.json",
+      "url": "https://raw.githubusercontent.com/cecilbowen/mhwilds-set-search/2cf89ea3baa8f7494b81d68fb00c427eeadc3860/src/data/manual/armor.json",
+      "sha256": "d499ef8fe3703771fdd1874bd9882e618878c2cbe3c7a3ed8b57e5fed5cd08ca",
+      "bytes": 2252
+    },
+    {
+      "name": "sets-set-overwrites.json",
+      "url": "https://raw.githubusercontent.com/cecilbowen/mhwilds-set-search/2cf89ea3baa8f7494b81d68fb00c427eeadc3860/src/data/manual/set-overwrites.json",
+      "sha256": "2674ed56eb4e70772beb95c306d0489b58c4d6d1855da0d128422117f161529d",
+      "bytes": 679
+    },
+    {
+      "name": "sets-head.json",
+      "url": "https://raw.githubusercontent.com/cecilbowen/mhwilds-set-search/2cf89ea3baa8f7494b81d68fb00c427eeadc3860/src/data/detailed/head.json",
+      "sha256": "276284b9fa3dcb82d0668890c6fcadfc0f59e65ebc2ba1b066a91ebe4a078dda",
+      "bytes": 103806
+    }
+  ],
+  "supplemental": [
+    {
+      "file": "wiki-armor.json",
+      "sha256": "dccc79409f759cb156b2b098872ad45e0f9210840bf03da6d10b0b5d495bf539",
+      "bytes": 991634
+    },
+    {
+      "file": "wiki-weapons.json",
+      "sha256": "4bf121ba1eea1ec4be80aee914a4c7d41e3431ff7c5cdcc1fba809638e4c3e6d",
+      "bytes": 2186215
+    },
+    {
+      "file": "wiki-groups.json",
+      "sha256": "55bf434e439f6b33b84a078cd0fc88bba4395985ed0feed72c905b9356b10f8e",
+      "bytes": 17915
+    },
+    {
+      "file": "wiki-rng.json",
+      "sha256": "85840df97be7fe8ebd7c5208d4a115f80c4fafca1c5373adab5b38a3c6804aee",
+      "bytes": 24792
+    },
+    {
+      "file": "wiki-artian.txt",
+      "sha256": "cfbcbd75342e709f8a912adfebfbdcf8a4fddd0568230c83cf5448b60707f694",
+      "bytes": 74810
+    },
+    {
+      "file": "wiki-gogma.txt",
+      "sha256": "837a475e73e183b03d15814b2567196f5f98a7e3d2653489fc9a49b599c9ca1a",
+      "bytes": 22210
+    }
+  ],
+  "notes": [
+    "MHDB en/es snapshot; static local data.",
+    "Wiki overlay supplies documented armor transcendence and legal random-charm tables.",
+    "Motion values and combat formulas use MIT reference bf5f6cf; patch parity is not certified.",
+    "Artian/Gogma configurations are theoretical; acquisition and reroll RNG costs are not guaranteed."
+  ]
+}

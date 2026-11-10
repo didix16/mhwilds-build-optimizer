@@ -111,7 +111,7 @@ For offline use, load the production build once over HTTPS or localhost and wait
 - Explore theoretical Artian and Gogma Artian configurations: infusions, five-reinforcement profiles, focus, and set/group contributions.
 - Inspect statistics, sharpness, skills, decoration placements, and documented crafting recipes.
 - Configure a monster/body part or custom hitzones, wounds, conditional skills, consumables, weapon buffs, and combos for each weapon type.
-- Receive progressive results from a Web Worker, with 12-second search windows, pause/resume, and the best 20 or 50 builds found.
+- Receive progressive results from a Web Worker that keeps searching until the modeled equipment combinations are exhausted or you pause it manually. Resume preserves search progress; the best 20 or 50 builds are retained without stopping the search when that result count is reached.
 - Save builds in the browser and export/import JSON, validating imported builds against the installed dataset.
 - Browse a local catalog of equipment, skills, items, and monsters.
 

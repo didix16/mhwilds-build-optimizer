@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {indexData,tally,armorVariant,slotsFor,collectMaterials,WEAPON_TYPES} from '../src/engine/equipment.js';
 import {placeDecorations,charmCandidates} from '../src/engine/decorations.js';
-import {configureArtian,optimizeArtian} from '../src/engine/artian.js';
+import {configureArtian,optimizeArtian,GOGMA_SETS,GOGMA_GROUPS} from '../src/engine/artian.js';
 import {statistics,extendedSharpness,attacksFor,attackCompatible} from '../src/engine/damage.js';
 import {createSearch,compareBuilds} from '../src/engine/solver.js';
 import {verifyBuild} from '../src/engine/verify.js';
@@ -111,6 +111,44 @@ test('Gogma search can use its set contribution to satisfy a four-piece bonus',(
   const w=db.weapons.find(w=>w.family==='gogma'&&w.kind==='great-sword');
   const q=basicQuery({requirements:{[id('Gogmapocalypse')]:2,[id('Attack Boost')]:3},families:['gogma'],weaponId:w.id,attribute:'dragon'});
   const {build}=firstBuild(q);assert.ok(build.weapon.config);assert.equal(build.points[id('Gogmapocalypse')]>=4,true);assert.equal(verifyBuild(db,build,q).valid,true);
+});
+test('Gogma search and verification require both weapon set and group contributions simultaneously',()=>{
+  const set=id('Gogmapocalypse'),group=id("Lord's Favor");
+  const base=db.weapons.find(w=>w.family==='gogma'&&w.kind==='great-sword');
+  const armor=[
+    ...['head','chest','arms'].map(kind=>db.armor.find(a=>a.kind===kind&&a.bonuses[set]===1)),
+    ...['waist','legs'].map(kind=>db.armor.find(a=>a.kind===kind&&a.rank==='high'&&a.bonuses[group]===1)),
+  ];
+  assert.ok(armor.every(Boolean));
+  const fixture=indexData({...db,weapons:[base],armor});
+  const query=basicQuery({requirements:{[set]:2,[group]:1},families:['gogma'],weaponId:base.id,attribute:'dragon'});
+  const state=createSearch(fixture,query).step(1);
+  assert.equal(state.candidateCounts[0],GOGMA_SETS.length*GOGMA_GROUPS.length);
+  const build=state.results[0];assert.ok(build);
+  assert.equal(build.weapon.config.setSkill,set);
+  assert.equal(build.weapon.config.groupSkill,group);
+  assert.equal(build.weapon.bonuses[set],1);
+  assert.equal(build.weapon.bonuses[group],1);
+  assert.equal(build.points[set],4);
+  assert.equal(build.points[group],3);
+  assert.equal(build.levels[set],2);
+  assert.equal(build.levels[group],1);
+  assert.equal(verifyBuild(fixture,build,query).valid,true);
+
+  const withoutWeapon=tally(fixture,{skills:{},bonuses:{}},build.armor,build.charm,build.decorations);
+  assert.equal(withoutWeapon.levels[set],1);
+  assert.equal(withoutWeapon.levels[group],0);
+  const weaponAlone=tally(fixture,build.weapon,[],null);
+  assert.equal(weaponAlone.levels[set],0);
+  assert.equal(weaponAlone.levels[group],0);
+
+  for(const [field,replacement] of [['setSkill',id("Gore Magala's Tyranny")],['groupSkill',id("Lord's Fury")]]){
+    const changed=structuredClone(build);
+    changed.weapon.config[field]=replacement;
+    const checked=verifyBuild(fixture,changed,query);
+    assert.equal(checked.valid,false);
+    assert.ok(checked.errors.includes('Required skill levels are not satisfied'));
+  }
 });
 test('an impossible group requirement exhausts a restricted equipment dataset',()=>{
   const a=db.armor.find(a=>a.kind==='head');

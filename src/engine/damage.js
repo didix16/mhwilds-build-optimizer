@@ -85,3 +85,8 @@ export function statistics(db,weapon,armor,levels,scenario={}) {
   const attack=Ref.calculateAttack(w.attack,buffs),affinity=Ref.calculateAffinity({affinity:w.affinity,buffs,target,rawType:attacks[selected[0]?.index]?.rawType||'Slash'});
   return {attack,displayAttack:Math.floor(attack*weapon.displayFactor),affinity,defense,resistances,sharpness:w.sharpness,element:w.element?{type:w.element.type,value:Ref.calculateElement(w.element.value,w.element.type,buffs)}:null,status:w.status?{type:w.status.type,value:Ref.calculateStatus(w.status.value,w.status.type,buffs)}:null,damage:Math.round(damage*100)/100,hit,crit,breakdown,unmodeled,incompatible};
 }
+
+export function unconditionalStatistics(db,weapon,armor,levels) {
+  const {damage,hit,crit,breakdown,incompatible,...stats}=statistics(db,weapon,armor,levels,{activeSkills:[],buffs:{},hitzones:{slash:0,blunt:0,pierce:0,fire:0,water:0,thunder:0,ice:0,dragon:0}});
+  return stats;
+}

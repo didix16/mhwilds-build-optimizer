@@ -11,7 +11,8 @@ function deterministicWorker({queued,clockStep}) {
   const moduleUrl=source=>'data:text/javascript,'+encodeURIComponent(source);
   const engine=moduleUrl(`export function createSearch(){let step=0;return {step(){step++;return {results:[],counts:{examined:step,queued:${queued},elapsed:step*13000},exhausted:step===4};}};}`);
   const equipment=moduleUrl('export const indexData=data=>data;');
-  const source=workerSource.replace("'./equipment.js'",JSON.stringify(equipment)).replace("'./solver.js'",JSON.stringify(engine));
+  const records=moduleUrl('export const compactBuild=b=>b;');
+  const source=workerSource.replace("'./equipment.js'",JSON.stringify(equipment)).replace("'./solver.js'",JSON.stringify(engine)).replace("'./search-record.js'",JSON.stringify(records));
   const bootstrap=`const {parentPort}=await import('node:worker_threads');let time=0;Date.now=()=>time+=${clockStep};globalThis.self=globalThis;globalThis.postMessage=data=>parentPort.postMessage(data);await import(${JSON.stringify(moduleUrl(source))});parentPort.on('message',data=>self.onmessage({data}));`;
   return new Worker(new URL(moduleUrl(bootstrap)),{type:'module'});
 }

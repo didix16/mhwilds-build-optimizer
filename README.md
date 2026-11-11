@@ -111,11 +111,38 @@ For offline use, load the production build once over HTTPS or localhost and wait
 - Explore theoretical Artian and Gogma Artian configurations: infusions, five-reinforcement profiles, focus, and set/group contributions.
 - Inspect statistics, sharpness, skills, decoration placements, and documented crafting recipes.
 - Configure a monster/body part or custom hitzones, wounds, conditional skills, consumables, weapon buffs, and combos for each weapon type.
-- Receive progressive results from a Web Worker that keeps searching until the modeled equipment combinations are exhausted or you pause it manually. Resume preserves search progress; the best 20 or 50 builds are retained without stopping the search when that result count is reached.
+- Receive progressive results from a Web Worker that keeps searching until the modeled equipment combinations are exhausted or you pause it manually. The best 20 or 50 builds are displayed; **all found builds** are archived locally.
+- Resume an archived search after closing the page, using saved solver checkpoints.
+- Export a self-contained, bilingual HTML report with filters, grouped equipment variants, detailed jewel placements, skills, base statistics, sharpness, and known crafting materials.
+- Optionally explore additional jewel fillings that favor up to five selected optional skills, with a configurable maximum of 2, 4, or 8 variants per equipment combination.
 - Save builds in the browser and export/import JSON, validating imported builds against the installed dataset.
 - Browse a local catalog of equipment, skills, items, and monsters.
 
 The optimizer does not call external services. Initial loading requests static files from the website's own origin.
+
+## Search archives and resuming later
+
+Every new search creates a separate entry under **Search archive / Archivo de búsquedas**. IndexedDB stores every unique emitted build, independently of the visible top-results limit. Identity includes the weapon and Artian configuration, five armor pieces and upgrade mode, exact charm, and decoration placements. Favorites remain a separate feature.
+
+The Worker saves its frontier, heap ordering, visited combinations, counters, and top results approximately every five seconds, and on manual pause. Each checkpoint and its associated result batch commit in a single IndexedDB transaction. Closing the page does not continue computing in the background: reopen the same site and choose **Resume search** from the archive. Use **Save checkpoint** and wait for the saved confirmation before closing to preserve the current position. A sudden close, crash, or forced mobile suspension resumes from the last committed checkpoint and may repeat the last unsaved seconds of exploration.
+
+Storage belongs to the browser profile, website origin, and deployment path. Use the same device, browser profile, and site address; localhost and GitHub Pages do not share archives. Clearing site data or private-browsing data can remove searches. A checkpoint cannot be resumed against a changed dataset or incompatible solver version. The archived dataset and base statistics are retained so its HTML report can still be exported after data changes. Resuming the same search in another tab protects the newer checkpoint and pauses the previous writer when it next attempts to save.
+
+Browser storage and device memory are finite. There is no arbitrary build-count cap, but very large searches can exhaust either. If a transaction fails, the search pauses, the failed batch remains in memory for retry, and the interface reports the storage problem. Free space and retry saving before closing. Deleting an inactive archived search removes its results and checkpoint; its dataset copy is removed when no other search references it.
+
+## Standalone HTML reports
+
+Choose **Download HTML report** while searching, paused, or finished. An active search first commits a checkpoint, then exports an immutable snapshot of every result stored up to that checkpoint; it can continue searching during export. Later matches appear in a later export. Each file represents one search and indicates whether that search was partial or exhausted.
+
+The downloaded HTML embeds its data, translations, styles, and filtering code. Open it directly from disk in a JavaScript-enabled browser; it requires no server, Internet connection, app installation, fonts, CDN, or external images. Its responsive layout supports desktop and mobile browsers that can open local HTML files. Some mobile file-preview apps disable JavaScript; open the file in a browser in that case. The report is for consultation and cannot resume or modify the original search.
+
+Filters include bilingual text search, weapon types and weapons, armor pieces, element/status, minimum attack/defense/affinity, required skill levels, and excluded active skills. Skill minimums are combined with AND. Armor selections are OR within the same armor position and AND across positions. Equipment grouping keeps alternative charm/jewel configurations together; pagination and lazy details avoid rendering every build at once. Filters operate only on the saved matches; they do not generate new optional combinations.
+
+Combat scenarios remain configurable in the optimizer but are **excluded from reports**. Reports show modeled attack, affinity, defense, resistances and sharpness without temporary items, conditional skill activations, or target bonuses. They omit scenario-dependent damage and combos. Every active skill and level is listed even when its numerical effect is not modeled. Material totals retain the documented recipe limitations described below.
+
+Export reads archive rows in batches. The final HTML still contains all rows, so large files require enough RAM to generate, open and filter; pagination does not remove that requirement. There is no promise of unlimited report size, especially on mobile.
+
+Optional jewel variants are disabled by default. When enabled, the solver retains distinct targeted greedy fillings and, when within the selected cap, required-only filling. It does not enumerate every legal charm, jewel permutation, or Artian profile. **All found** means all verified builds emitted by this modeled search, not all possible game builds.
 
 ## Bundled data
 
@@ -178,8 +205,8 @@ npm run combat:build
 
 ## Verification
 
-The engine/Worker tests cover an independent exhaustive oracle for 150 randomized decoration-placement cases, incompatible slots/ammunition, legal charm generation, set/group thresholds, transcendence, Gogma reinforcements, negative affinity and critical hits, conditional skills, traversal across all 14 weapon types, feasible/impossible searches, tampered-build detection, materials, and actual Worker pause/resume. Additional offline-cache tests check deployment-path isolation.
+The engine/Worker tests cover an independent exhaustive oracle for 150 randomized decoration-placement cases, incompatible slots/ammunition, legal charm generation, set/group thresholds, transcendence, Gogma reinforcements, negative affinity and critical hits, conditional skills, traversal across all 14 weapon types, feasible/impossible searches, tampered-build detection, materials, and actual Worker pause/resume. Additional tests cover checkpoint serialization and exact continuation, archive transaction rollback, deduplication, snapshot pagination, another-tab protection, optional variants, and deployment-path isolation. A React/Worker/IndexedDB integration test closes and remounts the session and retries a failed storage transaction.
 
-Component rendering is checked in both languages, and production checks verify the bundled database, local assets, and offline precache manifest.
+Component rendering is checked in both languages. Standalone reports execute in jsdom without external resources, exercising filtering, language switching, pagination, materials and escaped source text. A separate check executes the minified report client with a real Gogma configuration and writes `artifacts/example-search-report.html`. Production checks verify the bundled database, local assets, and offline precache manifest.
 
-The production build has been verified locally. Automated visual inspection was unavailable because the computer-use tool could not establish Brave's current URL with sufficient confidence. Responsive layouts and interactive browser behavior still need a visual review in an available browser.
+The production build has been verified locally. Automated visual inspection was unavailable because the browser access host was unavailable. Desktop and mobile appearance still need a visual review in an available browser; DOM-based interaction checks do not replace that review.

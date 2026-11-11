@@ -3,6 +3,7 @@ import { GOGMA_SETS,GOGMA_GROUPS,optimizeArtian } from './artian.js';
 import { charmCandidates,placeDecorations } from './decorations.js';
 import { statistics } from './damage.js';
 import { verifyBuild } from './verify.js';
+import { SEARCH_VERSION,datasetFingerprint,buildKey } from './search-record.js';
 
 class Heap {
   values=[];
@@ -62,26 +63,29 @@ function scoreEquipment(db,e,query){
   }
   return value;
 }
-function optionalDecorations(db,build,query){
+function optionalDecorations(db,build,query,targets=[]){
   const used=new Set(build.decorations.map(p=>p.slot));
   const free=slotsFor(build.weapon,build.armor,build.charm).filter(s=>!used.has(s.key));
   const allowed=new Set((query.priority==='defense'?['Defense Boost','Fire Resistance','Water Resistance','Thunder Resistance','Ice Resistance','Dragon Resistance']:['Attack Boost','Critical Eye','Critical Boost','Weakness Exploit','Handicraft','Fire Attack','Water Attack','Thunder Attack','Ice Attack','Dragon Attack']).map(name=>db.skills.find(s=>s.name.en===name)?.id));
+  targets.forEach(id=>allowed.add(+id));
   const decos=db.decorations.filter(d=>Object.keys(d.skills).some(id=>allowed.has(+id)));
   for(const slot of free.sort((a,b)=>a.level-b.level)) {
     let best=null;const current=tally(db,build.weapon,build.armor,build.charm,build.decorations);
     const currentStats=statistics(db,build.weapon,build.armor,current.levels,query.scenario);
-    let bestValue=query.priority==='defense'?currentStats.defense:currentStats.damage;
+    const valueOf=(levels,stats)=>targets.reduce((n,id)=>n*32+(levels[id]||0),0)*1e9+(query.priority==='defense'?stats.defense:stats.damage);
+    let bestValue=valueOf(current.levels,currentStats);
     for(const d of decos)if(d.kind===slot.kind&&d.slot<=slot.level){
       const next=[...build.decorations,{slot:slot.key,decoration:d.id}];
       const totals=tally(db,build.weapon,build.armor,build.charm,next),stats=statistics(db,build.weapon,build.armor,totals.levels,query.scenario);
-      const value=query.priority==='defense'?stats.defense:stats.damage;
+      const value=valueOf(totals.levels,stats);
       if(value>bestValue+1e-8){bestValue=value;best=d;}
     }
     if(best)build.decorations.push({slot:slot.key,decoration:best.id});
   }
 }
 
-export function createSearch(db,query) {
+export function createSearch(db,query,{checkpoint,onBuild}={}) {
+  if(checkpoint&&(checkpoint.version!==SEARCH_VERSION||checkpoint.fingerprint!==datasetFingerprint(db)||JSON.stringify(checkpoint.query)!==JSON.stringify(query)))throw Error('This checkpoint is incompatible with the installed dataset or search engine.');
   if(!Object.keys(query.requirements).length)throw Error('Select at least one required skill');
   for(const [id,level] of Object.entries(query.requirements))if(!db.skillMap.has(+id)||!Number.isInteger(level)||level<1||level>db.skillMap.get(+id).max)throw Error('Invalid skill requirement');
   const requirements=query.requirements,requiredBonus=Object.keys(requirements).filter(id=>['set','group'].includes(db.skillMap.get(+id).kind));
@@ -89,10 +93,11 @@ export function createSearch(db,query) {
   const scores=lists.map(list=>{list.sort((a,b)=>scoreEquipment(db,b,query)-scoreEquipment(db,a,query));return list.map(e=>scoreEquipment(db,e,query));});
   const charms=charmCandidates(db,requirements,query.priority,query.scenario);
   const charmMax={};for(const c of charms)for(const [id,l] of Object.entries(c.skills))charmMax[id]=Math.max(charmMax[id]||0,l);
-  const heap=new FairHeap(lists),visited=new Set(),results=[],resultKeys=new Set(),charmCache=new Map(),artianCache=new Map();
-  const counts={examined:0,feasible:0,invalid:0,started:Date.now()};
+  const heap=new FairHeap(lists),visited=new Set(checkpoint?.visited||[]),results=checkpoint?.results||[],charmCache=new Map(),artianCache=new Map();
+  const counts=checkpoint?.counts?{...checkpoint.counts}:{examined:0,feasible:0,invalid:0,started:Date.now(),elapsed:0};
   function enqueue(index){const key=index.join(',');if(visited.has(key))return;visited.add(key);heap.push({index,score:index.reduce((n,i,j)=>n+scores[j][i],0)});}
-  if(lists.every(x=>x.length)&&bonusFeasible(db,lists,requirements,requiredBonus)){const seeded=new Set();lists[0].forEach((w,i)=>{if(!seeded.has(w.kind)){seeded.add(w.kind);enqueue([i,0,0,0,0,0]);}});}
+  if(checkpoint){heap.position=checkpoint.position;for(const [kind,values] of checkpoint.heaps){const h=new Heap();h.values=values;heap.heaps.set(kind,h);}}
+  else if(lists.every(x=>x.length)&&bonusFeasible(db,lists,requirements,requiredBonus)){const seeded=new Set();lists[0].forEach((w,i)=>{if(!seeded.has(w.kind)){seeded.add(w.kind);enqueue([i,0,0,0,0,0]);}});}
   function complete(weapon,armor){
     const initial=tally(db,weapon,armor,null);
     if(requiredBonus.some(id=>(initial.levels[id]||0)<requirements[id]))return null;
@@ -127,30 +132,39 @@ export function createSearch(db,query) {
       if(!optimized){optimized=optimizeArtian(db,weapon,armor,totals.levels,query.scenario,query.attribute);artianCache.set(cacheKey,optimized);}
       if(!optimized)return null;build.weapon=optimized;
     }
-    optionalDecorations(db,build,query);
-    totals=tally(db,build.weapon,armor,charm,build.decorations);
-    build.levels=totals.levels;build.points=totals.points;
-    build.stats=statistics(db,build.weapon,armor,build.levels,query.scenario);
-    build.rarity=armor.reduce((n,a)=>n+a.rarity,weapon.rarity+charm.rarity);
-    const check=verifyBuild(db,build,query);
-    if(!check.valid){counts.invalid++;throw Error(`Result verification failed: ${check.errors.join('; ')}`);}
-    build.verified=true;
-    build.key=[weapon.searchId,...armor.map(a=>a.id)].join('|');
-    return build;
+    const builds=[],keys=new Set(),base=structuredClone(build);
+    const targets=(query.optionalSkills||[]).filter(id=>db.skillMap.has(+id)&&!['set','group'].includes(db.skillMap.get(+id).kind)).slice(0,5);
+    const profiles=[[]];
+    if(query.optionalVariants){for(let i=0;i<targets.length;i++)profiles.push([...targets.slice(i),...targets.slice(0,i)]);profiles.push(null,[...targets].reverse());}
+    for(const profile of profiles.slice(0,Math.max(1,Math.min(8,query.variantLimit||8)))){
+      const variant=structuredClone(base);
+      if(profile)optionalDecorations(db,variant,query,profile);
+      totals=tally(db,variant.weapon,armor,charm,variant.decorations);
+      variant.levels=totals.levels;variant.points=totals.points;
+      variant.stats=statistics(db,variant.weapon,armor,variant.levels,query.scenario);
+      variant.rarity=armor.reduce((n,a)=>n+a.rarity,weapon.rarity+charm.rarity);
+      const check=verifyBuild(db,variant,query);
+      if(!check.valid){counts.invalid++;throw Error(`Result verification failed: ${check.errors.join('; ')}`);}
+      variant.verified=true;variant.key=buildKey(variant);
+      if(!keys.has(variant.key)){keys.add(variant.key);builds.push(variant);}
+    }
+    return builds;
   }
   return {
     step(milliseconds=100){
-      const until=performance.now()+milliseconds;
+      const began=performance.now(),until=began+milliseconds;
       while(heap.length&&performance.now()<until){
         const {index}=heap.pop();counts.examined++;
         for(let axis=0;axis<index.length;axis++)if(index[axis]+1<lists[axis].length){const next=[...index];next[axis]++;enqueue(next);}
         const equipment=index.map((i,j)=>lists[j][i]);
-        const build=complete(equipment[0],equipment.slice(1));
-        if(build&&!resultKeys.has(build.key)){
-          counts.feasible++;resultKeys.add(build.key);results.push(build);results.sort((a,b)=>compareBuilds(a,b,query.priority));if(results.length>query.limit)results.pop();
+        const builds=complete(equipment[0],equipment.slice(1));
+        for(const build of builds||[]){
+          counts.feasible++;onBuild?.(build);results.push(build);results.sort((a,b)=>compareBuilds(a,b,query.priority));if(results.length>query.limit)results.pop();
         }
       }
-      return {results:[...results],counts:{...counts,queued:heap.length,elapsed:Date.now()-counts.started},exhausted:!heap.length,candidateCounts:lists.map(x=>x.length)};
+      counts.elapsed+=performance.now()-began;
+      return {results:[...results],counts:{...counts,queued:heap.length},exhausted:!heap.length,candidateCounts:lists.map(x=>x.length)};
     },
+    checkpoint(){return {version:SEARCH_VERSION,fingerprint:datasetFingerprint(db),query,counts:{...counts},results:[...results],visited:[...visited],position:heap.position,heaps:[...heap.heaps].map(([kind,h])=>[kind,h.values])};},
   };
 }

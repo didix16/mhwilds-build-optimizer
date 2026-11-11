@@ -1,6 +1,6 @@
 import { unconditionalStatistics } from './damage.js';
 // These versions describe resumable solver state, not the game's patch version.
-export const SEARCH_VERSION = 1;
+export const SEARCH_VERSION = 2;
 const fingerprints = new WeakMap();
 export function datasetFingerprint(db) {
   if (fingerprints.has(db)) return fingerprints.get(db);

@@ -1,23 +1,13 @@
-import { ARMOR_KINDS,add,armorVariant,slotsFor,tally,satisfies,hasAttribute } from './equipment.js';
+import { ARMOR_KINDS,add,armorVariant,slotsFor,tally,hasAttribute } from './equipment.js';
 import { GOGMA_SETS,GOGMA_GROUPS,optimizeArtian } from './artian.js';
-import { charmCandidates,placeDecorations } from './decorations.js';
+import { charmCandidates } from './decorations.js';
 import { statistics } from './damage.js';
 import { verifyBuild } from './verify.js';
 import { SEARCH_VERSION,datasetFingerprint,buildKey } from './search-record.js';
+import {createDecorationSolver} from './decoration-solver.js';
+import {prepareCharms} from './feasibility.js';
+import {createTraversal} from './traversal.js';
 
-class Heap {
-  values=[];
-  push(value){let i=this.values.push(value)-1;while(i>0){const p=(i-1)>>1;if(this.values[p].score>=value.score)break;this.values[i]=this.values[p];i=p;}this.values[i]=value;}
-  pop(){const top=this.values[0],last=this.values.pop();if(this.values.length){let i=0;while(true){let c=i*2+1;if(c>=this.values.length)break;if(c+1<this.values.length&&this.values[c+1].score>this.values[c].score)c++;if(this.values[c].score<=last.score)break;this.values[i]=this.values[c];i=c;}this.values[i]=last;}return top;}
-  get length(){return this.values.length;}
-}
-class FairHeap {
-  heaps=new Map();position=0;
-  constructor(lists){this.lists=lists;}
-  push(value){const type=this.lists[0][value.index[0]].kind;if(!this.heaps.has(type))this.heaps.set(type,new Heap());this.heaps.get(type).push(value);}
-  pop(){const keys=[...this.heaps.keys()];for(let i=0;i<keys.length;i++){const h=this.heaps.get(keys[this.position++%keys.length]);if(h.length)return h.pop();}}
-  get length(){return [...this.heaps.values()].reduce((n,h)=>n+h.length,0);}
-}
 export function compareBuilds(a,b,priority) {
   if(priority==='damage')return b.stats.damage-a.stats.damage||b.stats.defense-a.stats.defense||b.rarity-a.rarity;
   return b.stats.defense-a.stats.defense||b.rarity-a.rarity||b.stats.damage-a.stats.damage;
@@ -25,6 +15,12 @@ export function compareBuilds(a,b,priority) {
 function bonusFeasible(db,lists,requirements,ids){
   if(!ids.length)return true;
   const targets=ids.map(id=>db.skillMap.get(+id).ranks.find(r=>r.level===requirements[id]).points);
+  for(const kind of ['set','group']){
+    const indices=ids.map((_,i)=>i).filter(i=>db.skillMap.get(+ids[i]).kind===kind);
+    const needed=indices.reduce((sum,i)=>sum+targets[i],0);
+    const possible=lists.reduce((sum,list)=>sum+Math.max(0,...list.map(e=>indices.reduce((n,i)=>n+(e.bonuses[ids[i]]||0),0))),0);
+    if(needed>possible)return false;
+  }
   let states=new Map([[ids.map(()=>0).join(','),ids.map(()=>0)]]);
   for(const list of lists){
     const vectors=[...new Map(list.map(e=>{const v=ids.map(id=>e.bonuses[id]||0);return [v.join(','),v];})).values()];
@@ -90,46 +86,46 @@ export function createSearch(db,query,{checkpoint,onBuild}={}) {
   for(const [id,level] of Object.entries(query.requirements))if(!db.skillMap.has(+id)||!Number.isInteger(level)||level<1||level>db.skillMap.get(+id).max)throw Error('Invalid skill requirement');
   const requirements=query.requirements,requiredBonus=Object.keys(requirements).filter(id=>['set','group'].includes(db.skillMap.get(+id).kind));
   const lists=[weaponCandidates(db,query),...ARMOR_KINDS.map(k=>db.armor.filter(a=>a.kind===k&&(!query.rank||query.rank==='all'||a.rank===query.rank)).map(a=>armorVariant(a,query.transcended)))];
-  const scores=lists.map(list=>{list.sort((a,b)=>scoreEquipment(db,b,query)-scoreEquipment(db,a,query));return list.map(e=>scoreEquipment(db,e,query));});
+  for(const list of lists)list.sort((a,b)=>scoreEquipment(db,b,query)-scoreEquipment(db,a,query));
   const charms=charmCandidates(db,requirements,query.priority,query.scenario);
-  const charmMax={};for(const c of charms)for(const [id,l] of Object.entries(c.skills))charmMax[id]=Math.max(charmMax[id]||0,l);
-  const heap=new FairHeap(lists),visited=new Set(checkpoint?.visited||[]),results=checkpoint?.results||[],charmCache=new Map(),artianCache=new Map();
-  const counts=checkpoint?.counts?{...checkpoint.counts}:{examined:0,feasible:0,invalid:0,started:Date.now(),elapsed:0};
-  function enqueue(index){const key=index.join(',');if(visited.has(key))return;visited.add(key);heap.push({index,score:index.reduce((n,i,j)=>n+scores[j][i],0)});}
-  if(checkpoint){heap.position=checkpoint.position;for(const [kind,values] of checkpoint.heaps){const h=new Heap();h.values=values;heap.heaps.set(kind,h);}}
-  else if(lists.every(x=>x.length)&&bonusFeasible(db,lists,requirements,requiredBonus)){const seeded=new Set();lists[0].forEach((w,i)=>{if(!seeded.has(w.kind)){seeded.add(w.kind);enqueue([i,0,0,0,0,0]);}});}
+  const decoSolver=createDecorationSolver(db,requirements),charmPlans=prepareCharms(db,lists,requirements,charms,decoSolver);
+  const originalWeapons=lists[0].length;
+  lists[0]=lists[0].filter(w=>charmPlans.forWeapon(w).length);
+  const hasPools=lists.every(x=>x.length),bonusPossible=hasPools&&bonusFeasible(db,lists,requirements,requiredBonus);
+  const reason=originalWeapons&&!lists[0].length&&charmPlans.hasWeaponRequirements?'weaponSkillConflict':hasPools&&!bonusPossible?'bonusSkillConflict':null;
+  const globallyFeasible=hasPools&&bonusPossible;
+  const bonusTargets=Object.fromEntries(requiredBonus.map(id=>[id,db.skillMap.get(+id).ranks.find(r=>r.level===requirements[id]).points]));
+  const traversal=createTraversal([globallyFeasible?lists[0]:[],...lists.slice(1)],query,decoSolver,bonusTargets,charms,checkpoint?.traversal);
+  const results=checkpoint?.results||[],charmCache=new Map(),artianCache=new Map();
+  const counts=checkpoint?.counts?{...checkpoint.counts}:{examined:0,feasible:0,invalid:0,charmChecks:0,decorationChecks:0,started:Date.now(),elapsed:0};
+  const cachePut=(map,key,value)=>{if(map.size>=10000)map.delete(map.keys().next().value);map.set(key,value);};
   function complete(weapon,armor){
     const initial=tally(db,weapon,armor,null);
     if(requiredBonus.some(id=>(initial.levels[id]||0)<requirements[id]))return null;
     const baseSlots=slotsFor(weapon,armor,null);
-    const normalIds=Object.keys(requirements).filter(id=>!requiredBonus.includes(id));
-    // Optimistic single-skill bounds only reject provably impossible skeletons.
-    for(const id of normalIds){
-      const maxPerSlot=Math.max(0,...db.decorations.map(d=>d.skills[id]||0));
-      if((initial.levels[id]||0)+(charmMax[id]||0)+(baseSlots.length+3)*maxPerSlot<requirements[id])return null;
-    }
-    const signature=normalIds.map(id=>Math.max(0,requirements[id]-(initial.levels[id]||0))).join(',')+'|'+baseSlots.map(s=>`${s.kind}:${s.level}`).sort().join(',');
+    const gaps=decoSolver.gapsFor(initial.levels),slotCounts=decoSolver.countsFor(baseSlots);
+    const signature=gaps.join(',')+'|'+slotCounts.join(',');
     let witness=charmCache.get(signature);
     if(witness===false)return null;
-    const options=witness?[witness]:charms;
+    const options=witness?[witness]:charmPlans.forWeapon(weapon);
     let charm,placements;
-    for(const c of options){
-      const levels={...initial.levels};add(levels,c.skills);
-      const slots=slotsFor(weapon,armor,c);
-      let impossible=false;
-      for(const id of normalIds){const gap=requirements[id]-(levels[id]||0);if(gap<=0)continue;const capacity=slots.reduce((n,s)=>n+Math.max(0,...db.decorations.filter(d=>d.kind===s.kind&&d.slot<=s.level).map(d=>d.skills[id]||0)),0);if(gap>capacity){impossible=true;break;}}
-      if(impossible)continue;
-      const placed=placeDecorations(db,requirements,levels,slots);
-      if(placed){charm=c;placements=placed;break;}
+    for(const plan of options){
+      counts.charmChecks++;
+      const nextGaps=gaps.map((v,i)=>Math.max(0,v-plan.levels[i])),available=slotCounts.map((v,b)=>v+plan.counts[b]);
+      if(!decoSolver.canFit(nextGaps,available))continue;
+      const levels={...initial.levels};add(levels,plan.charm.skills);
+      counts.decorationChecks++;
+      const placed=decoSolver.place(levels,[...baseSlots,...plan.slots]);
+      if(placed){charm=plan.charm;placements=placed;witness=plan;break;}
     }
-    if(!charm){charmCache.set(signature,false);return null;}
-    charmCache.set(signature,charm);
+    if(!charm){cachePut(charmCache,signature,false);return null;}
+    cachePut(charmCache,signature,witness);
     const build={weapon,armor,charm,decorations:placements};
     let totals=tally(db,weapon,armor,charm,placements);
     if(weapon.family!=='crafted'){
       const cacheKey=weapon.searchId+'|'+Object.entries(totals.levels).sort().map(x=>x.join(':')).join(',');
       let optimized=artianCache.get(cacheKey);
-      if(!optimized){optimized=optimizeArtian(db,weapon,armor,totals.levels,query.scenario,query.attribute);artianCache.set(cacheKey,optimized);}
+      if(!optimized){optimized=optimizeArtian(db,weapon,armor,totals.levels,query.scenario,query.attribute);cachePut(artianCache,cacheKey,optimized);}
       if(!optimized)return null;build.weapon=optimized;
     }
     const builds=[],keys=new Set(),base=structuredClone(build);
@@ -153,9 +149,9 @@ export function createSearch(db,query,{checkpoint,onBuild}={}) {
   return {
     step(milliseconds=100){
       const began=performance.now(),until=began+milliseconds;
-      while(heap.length&&performance.now()<until){
-        const {index}=heap.pop();counts.examined++;
-        for(let axis=0;axis<index.length;axis++)if(index[axis]+1<lists[axis].length){const next=[...index];next[axis]++;enqueue(next);}
+      while(traversal.active&&performance.now()<until){
+        const index=traversal.next();if(!index)continue;
+        counts.examined++;
         const equipment=index.map((i,j)=>lists[j][i]);
         const builds=complete(equipment[0],equipment.slice(1));
         for(const build of builds||[]){
@@ -163,8 +159,8 @@ export function createSearch(db,query,{checkpoint,onBuild}={}) {
         }
       }
       counts.elapsed+=performance.now()-began;
-      return {results:[...results],counts:{...counts,queued:heap.length},exhausted:!heap.length,candidateCounts:lists.map(x=>x.length)};
+      return {results:[...results],counts:{...counts,...traversal.counts,queued:traversal.queued},exhausted:!traversal.active,candidateCounts:lists.map(x=>x.length),reason};
     },
-    checkpoint(){return {version:SEARCH_VERSION,fingerprint:datasetFingerprint(db),query,counts:{...counts},results:[...results],visited:[...visited],position:heap.position,heaps:[...heap.heaps].map(([kind,h])=>[kind,h.values])};},
+    checkpoint(){return {version:SEARCH_VERSION,fingerprint:datasetFingerprint(db),query,counts:{...counts,...traversal.counts},results:[...results],traversal:traversal.snapshot()};},
   };
 }

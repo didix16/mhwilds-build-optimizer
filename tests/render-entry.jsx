@@ -17,10 +17,12 @@ const query={requirements:{72:3,57:2},weaponTypes:['great-sword'],families:['cra
 const result=createSearch(db,query).step(1).results[0];assert.ok(result);
 for(const lang of ['en','es']){
   const t={...messages[lang],...archiveMessages[lang]};
-  const archive={runs:[{id:'render-check',createdAt:Date.now(),updatedAt:Date.now(),sequence:1,resultCount:123,query,status:'paused',fingerprint:datasetFingerprint(db),solverVersion:SEARCH_VERSION}],active:null};
+  const run={id:'render-check',createdAt:Date.now(),updatedAt:Date.now(),sequence:1,resultCount:123,query,status:'paused',fingerprint:datasetFingerprint(db),solverVersion:SEARCH_VERSION};
+  const archive={runs:[run,{...run,id:'legacy-search',solverVersion:1}],active:null};
   const markup=renderToStaticMarkup(<PrimeReactProvider><BuildDetail build={result} query={query} {...{db,lang,t}} onSave={()=>{}} onExport={()=>{}}/><Catalog {...{db,lang,t}}/><Sources {...{db,lang,t}}/><SearchArchive {...{db,lang,t,archive}}/></PrimeReactProvider>);
   assert.ok(markup.includes(result.weapon.name[lang]));assert.ok(markup.includes(t.verified));assert.ok(markup.includes(t.requirements)||markup.includes(t.allSkills));assert.ok(markup.includes('1.042.00.03'));
   assert.ok(!markup.includes('src="undefined'));assert.ok(!markup.includes('>NaN<'));
   assert.ok(markup.includes(t.searches)&&markup.includes(t.report)&&markup.includes(t.resumeSearch));
+  assert.ok(markup.includes(t.restartSearch));
   console.log(`${lang}: build, catalog, source and archive components rendered (${markup.length.toLocaleString()} characters).`);
 }

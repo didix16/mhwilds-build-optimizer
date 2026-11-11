@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import {armorKey,indexArmorPieces} from './armor-key.mjs';
 const load = async name => JSON.parse((await readFile(`.cache/sources/${name}.json`, 'utf8')).replace(/^\uFEFF/, ''));
 const clean = s => (s || '').replace(/<[^>]+>/g, '').replace(/\r?\n/g, ' ').trim();
 const key = s => s.toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -26,11 +27,11 @@ const itemNames=new Map(items.map(x=>[key(x.name.en),x.id]));
 const costs=xs=>(xs||[]).map(x=>({item:x.item.id,quantity:x.quantity}));
 const wikiCosts=xs=>(xs||[]).map(x=>({item:itemNames.get(key(x.Name)),quantity:Number(x.Quantity),...(!itemNames.has(key(x.Name))?{name:{en:x.Name,es:x.Name}}:{})}));
 const wikiArmor=await load('wiki-armor');
-const wikiPieces=new Map(wikiArmor.flatMap(s=>s.Pieces.map(p=>[key(p.Name),p])));
+const wikiPieces=indexArmorPieces(wikiArmor);
 function wikiSlots(p,prefix='Decos') {return [4,3,2,1].flatMap(n=>Array(Number(p[`${prefix}${n}`])||0).fill(n));}
 let armorMatched=0;
 const armor=en.armor.map(a=>{
-  const p=wikiPieces.get(key(a.name)); if(p) armorMatched++;
+  const p=wikiPieces.get(armorKey(a.name)); if(p) armorMatched++;
   return {id:`a${a.id}`,sourceId:a.id,name:bilingual(a,translations('armor').get(a.id)),description:bilingual(a,translations('armor').get(a.id),'description'),kind:a.kind,rank:a.rank,rarity:a.rarity,defense:{base:a.defense.base,max:p?Number(p.MaxDefense):a.defense.max,transcended:p?Number(p.MaxDefenseTranscend):null},slots:a.slots,transcendedSlots:p?wikiSlots(p,'TranscendDecos'):null,skills:ordinary(a.skills),bonuses:bonuses(a.skills),resistances:a.resistances,materials:costs(a.crafting?.materials),zenny:a.crafting?.zennyCost||0,transcendMaterials:wikiCosts(p?.TranscendMaterials),transcendZenny:Number(p?.TranscendCost)||0,upgradeCoverage:!!p};
 });
 const decorations=en.decorations.map(d=>({id:`d${d.id}`,name:bilingual(d,translations('decorations').get(d.id)),description:bilingual(d,translations('decorations').get(d.id),'description'),kind:d.kind,slot:d.slot,rarity:d.rarity,skills:ordinary(d.skills),color:d.icon?.color}));
@@ -65,7 +66,7 @@ for(const file of ['wiki-armor.json','wiki-weapons.json','wiki-groups.json','wik
   const b=await readFile(`.cache/sources/${file}`); supplemental.push({file,sha256:createHash('sha256').update(b).digest('hex'),bytes:b.length});
 }
 const db={skills,armor,weapons,decorations,charms,randomCharms,charmGroups:groups,items,monsters,artian,
-  meta:{schema:1,targetVersion:'1.042.00.03',contentCoverage:'1.041 content present; 1.042 patch parity not certified',downloadedAt:sourceManifest.downloadedAt,counts:{skills:skills.length,armor:armor.length,weapons:weapons.length,decorations:decorations.length,charms:charms.length,monsters:monsters.length},armorUpgradeMatched:armorMatched,sources:sourceManifest.records,supplemental,notes:['MHDB en/es snapshot; static local data.','Wiki overlay supplies documented armor transcendence and legal random-charm tables.','Motion values and combat formulas use MIT reference bf5f6cf; patch parity is not certified.','Artian/Gogma configurations are theoretical; acquisition and reroll RNG costs are not guaranteed.']}};
+  meta:{schema:1,normalizationRevision:2,targetVersion:'1.042.00.03',contentCoverage:'1.041 content present; 1.042 patch parity not certified',downloadedAt:sourceManifest.downloadedAt,counts:{skills:skills.length,armor:armor.length,weapons:weapons.length,decorations:decorations.length,charms:charms.length,monsters:monsters.length},armorUpgradeMatched:armorMatched,sources:sourceManifest.records,supplemental,notes:['MHDB en/es snapshot; static local data.','Wiki overlay supplies documented armor transcendence and legal random-charm tables.','Motion values and combat formulas use MIT reference bf5f6cf; patch parity is not certified.','Artian/Gogma configurations are theoretical; acquisition and reroll RNG costs are not guaranteed.']}};
 await mkdir('public/data',{recursive:true});
 await writeFile('public/data/database.json',JSON.stringify(db));
 await writeFile('public/data/manifest.json',JSON.stringify(db.meta,null,2));

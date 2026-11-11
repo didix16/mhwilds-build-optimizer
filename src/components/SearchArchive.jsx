@@ -16,7 +16,7 @@ export default function SearchArchive({archive,db,lang,t,onResume,onClose,onErro
       return <article className="panel archive-card" key={run.id}><div className="archive-card-heading"><h2>{new Date(run.createdAt).toLocaleString(lang)}</h2><span className="badge">{isActive?t.activeArchive:run.status==='exhausted'?t.exhausted:t.paused}</span></div>
         <p>{Object.entries(run.query.requirements).map(([id,level])=>`${localized(db.skillMap.get(+id)?.name,lang)||id} ${level}`).join(' · ')}</p>
         <strong>{run.resultCount.toLocaleString(lang)} {t.storedResults}</strong><p className="helper">{run.sequence?`${t.savedAt}: ${new Date(run.updatedAt).toLocaleString(lang)}`:t.noCheckpoint}</p>
-        {!compatible&&<p className="helper amber">{t.incompatible}</p>}
+        {!compatible&&<><p className="helper amber">{t.incompatible}</p><Button label={t.restartSearch} icon="pi pi-refresh" outlined disabled={busy||!!exportProgress} onClick={()=>act(onResume(run,true))}/></>}
         <div className="archive-actions">{run.status!=='exhausted'&&<Button label={t.resumeSearch} icon="pi pi-play" outlined disabled={!compatible||!run.sequence||busy||!!exportProgress} onClick={()=>act(onResume(run))}/>}
           <Button label={t.report} icon="pi pi-download" outlined disabled={!run.sequence||!!exportProgress||busy} onClick={()=>act(archive.exportReport(run.id,lang))}/>
           {isActive?<Button label={t.closeSearch} text onClick={()=>act(onClose())}/>:<Button icon="pi pi-trash" aria-label={t.archiveDelete} title={t.archiveDelete} text severity="secondary" disabled={busy||!!exportProgress} onClick={()=>{if(window.confirm(t.archiveDeleteConfirm))act(archive.remove(run.id));}}/>}</div>
